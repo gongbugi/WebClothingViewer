@@ -1,0 +1,28 @@
+{
+  "outfits": [
+    {
+      "id": "tshirt_001",
+      "outfitName": "기본 티셔츠",
+      "type": "Top",
+      "topCategory": "Tshirt",
+      "texturePath": "https://example.com/textures/tshirt_001.jpg",
+      "thumbnailUrl": "https://example.com/thumbnails/tshirt1.jpg"
+    },
+    {
+      "id": "tshirt_002",
+      "outfitName": "티셔츠",
+      "type": "Top",
+      "topCategory": "Tshirt",
+      "texturePath": "https://example.com/textures/tshirt_002.jpg",
+      "thumbnailUrl": "https://example.com/thumbnails/tshirt2.jpg"
+    },
+    {
+      "id": "shorts_001",
+      "outfitName": "기본 반바지",
+      "type": "Bottom",
+      "bottomCategory": "Shorts",
+      "texturePath": "https://example.com/textures/shorts_001.jpg",
+      "thumbnailUrl": "https://example.com/thumbnails/shorts1.jpg"
+    }
+  ]
+}

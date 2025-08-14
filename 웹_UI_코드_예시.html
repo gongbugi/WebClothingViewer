@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>의류 뷰어</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            gap: 20px;
+        }
+        .sidebar {
+            width: 300px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .unity-container {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .outfit-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .outfit-item {
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .outfit-item:hover {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+        .outfit-item.selected {
+            border-color: #007bff;
+            background: #e3f2fd;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .status.loading { background: #fff3cd; color: #856404; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>의류 선택</h2>
+            
+            <div id="outfit-list">
+                <div class="status loading">Unity 로딩 중...</div>
+            </div>
+            
+            <div id="status" class="status" style="display: none;"></div>
+            
+            <hr style="margin: 20px 0;">
+            
+            <h3>카메라 컨트롤</h3>
+            <button onclick="rotateCamera(-10, 0)">← 왼쪽</button>
+            <button onclick="rotateCamera(10, 0)">오른쪽 →</button>
+            <br><br>
+            <button onclick="zoomCamera(0.5)">줌 인 +</button>
+            <button onclick="zoomCamera(-0.5)">줌 아웃 -</button>
+            
+            <hr style="margin: 20px 0;">
+            
+            <button onclick="hideModel()">모델 숨기기</button>
+            <button onclick="showModel()">모델 보이기</button>
+        </div>
+        
+        <div class="unity-container">
+            <!-- Unity WebGL이 여기에 로드됩니다 -->
+            <canvas id="unity-canvas" style="width: 100%; height: 600px; display: block;"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let unityInstance = null;
+        let availableOutfits = [];
+        let selectedOutfitId = null;
+
+        // Unity 로드 완료 후 호출
+        function onUnityLoaded(instance) {
+            unityInstance = instance;
+            showStatus("Unity 연결 완료!", "success");
+            
+            // 사용 가능한 옷 목록 요청
+            setTimeout(() => {
+                getAvailableOutfits();
+            }, 1000);
+        }
+
+        // 옷 변경 요청
+        function changeClothing(outfitId) {
+            if (!unityInstance) {
+                showStatus("Unity가 아직 로드되지 않았습니다.", "error");
+                return;
+            }
+            
+            showStatus(`옷 변경 중: ${outfitId}`, "loading");
+            selectedOutfitId = outfitId;
+            
+            // Unity로 옷 변경 요청
+            unityInstance.SendMessage('WebGLManager', 'ChangeClothingFromWeb', outfitId);
+            
+            // UI 업데이트
+            updateOutfitSelection(outfitId);
+        }
+
+        // 사용 가능한 옷 목록 요청
+        function getAvailableOutfits() {
+            if (unityInstance) {
+                unityInstance.SendMessage('WebGLManager', 'GetAvailableOutfits', '');
+            }
+        }
+
+        // 카메라 회전
+        function rotateCamera(x, y) {
+            if (unityInstance) {
+                unityInstance.SendMessage('WebGLManager', 'RotateCamera', x + ',' + y);
+            }
+        }
+
+        // 카메라 줌
+        function zoomCamera(delta) {
+            if (unityInstance) {
+                unityInstance.SendMessage('WebGLManager', 'ZoomCamera', delta.toString());
+            }
+        }
+
+        // 모델 숨기기/보이기
+        function hideModel() {
+            if (unityInstance) {
+                unityInstance.SendMessage('WebGLManager', 'HideModelFromWeb', '');
+            }
+        }
+
+        function showModel() {
+            if (unityInstance) {
+                unityInstance.SendMessage('WebGLManager', 'ShowModelFromWeb', '');
+            }
+        }
+
+        // Unity에서 오는 메시지 처리
+        function handleUnityMessage(message) {
+            console.log('Unity → 웹:', message);
+            
+            if (message === 'unityReady') {
+                showStatus("Unity 준비 완료!", "success");
+                
+            } else if (message.startsWith('outfitsLoaded:')) {
+                const count = message.split(':')[1];
+                showStatus(`옷 데이터 로드 완료: ${count}개`, "success");
+                
+            } else if (message.startsWith('availableOutfits:')) {
+                // 옷 목록 파싱 및 UI 생성
+                const outfitsData = message.substring('availableOutfits:'.length);
+                parseAndDisplayOutfits(outfitsData);
+                
+            } else if (message.startsWith('clothingChanged:')) {
+                const outfitId = message.split(':')[1];
+                showStatus(`모델 변경 완료: ${outfitId}`, "loading");
+                
+            } else if (message.startsWith('textureLoaded:')) {
+                const outfitId = message.split(':')[1];
+                showStatus(`텍스처 적용 완료!`, "success");
+                
+            } else if (message.startsWith('error:')) {
+                const error = message.substring('error:'.length);
+                showStatus(`에러: ${error}`, "error");
+            }
+        }
+
+        // 옷 목록 파싱 및 UI 생성
+        function parseAndDisplayOutfits(outfitsData) {
+            const outfitList = document.getElementById('outfit-list');
+            outfitList.innerHTML = '';
+            
+            if (!outfitsData || outfitsData.length === 0) {
+                outfitList.innerHTML = '<div class="status error">옷 데이터가 없습니다.</div>';
+                return;
+            }
+            
+            // 데이터 파싱: "id1|name1|type1,id2|name2|type2,..."
+            const outfits = outfitsData.split(',').map(item => {
+                const [id, name, type] = item.split('|');
+                return { id, name, type };
+            });
+            
+            availableOutfits = outfits;
+            
+            // 옷 목록 UI 생성
+            const gridDiv = document.createElement('div');
+            gridDiv.className = 'outfit-grid';
+            
+            outfits.forEach(outfit => {
+                const outfitDiv = document.createElement('div');
+                outfitDiv.className = 'outfit-item';
+                outfitDiv.onclick = () => changeClothing(outfit.id);
+                outfitDiv.innerHTML = `
+                    <div><strong>${outfit.name}</strong></div>
+                    <small>${outfit.type}</small>
+                `;
+                outfitDiv.setAttribute('data-outfit-id', outfit.id);
+                gridDiv.appendChild(outfitDiv);
+            });
+            
+            outfitList.appendChild(gridDiv);
+            showStatus(`${outfits.length}개 옷 목록 로드 완료`, "success");
+        }
+
+        // 옷 선택 UI 업데이트
+        function updateOutfitSelection(outfitId) {
+            document.querySelectorAll('.outfit-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            const selectedItem = document.querySelector(`[data-outfit-id="${outfitId}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('selected');
+            }
+        }
+
+        // 상태 메시지 표시
+        function showStatus(message, type = "loading") {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+            
+            // 성공 메시지는 3초 후 자동 숨김
+            if (type === "success") {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Unity 메시지 리스너 설정
+        window.addEventListener('message', function(event) {
+            if (typeof event.data === 'string') {
+                handleUnityMessage(event.data);
+            }
+        });
+
+        // Unity WebGL 로드 스크립트
+        // 실제 빌드 후 생성된 스크립트로 교체 필요
+        /*
+        <script src="Build/WebClothingViewer.loader.js"></script>
+        <script>
+            createUnityInstance(document.querySelector("#unity-canvas"), {
+                dataUrl: "Build/WebClothingViewer.data",
+                frameworkUrl: "Build/WebClothingViewer.framework.js",
+                codeUrl: "Build/WebClothingViewer.wasm",
+                streamingAssetsUrl: "StreamingAssets",
+            }).then((unityInstance) => {
+                onUnityLoaded(unityInstance);
+            }).catch((message) => {
+                showStatus("Unity 로드 실패: " + message, "error");
+            });
+        </script>
+        */
+    </script>
+</body>
+</html>
