@@ -49,6 +49,7 @@ public class OutfitDataLoader : MonoBehaviour
         }
     }
 
+    [ContextMenu("Test Load Outfits")]
     public void LoadOutfits()
     {
         if (useLocalFile)

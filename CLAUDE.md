@@ -30,11 +30,26 @@ WebClothingViewer는 Unity로 개발된 웹 기반 의류 3D 뷰어 애플리케
    - OutfitData 기반 3D 모델 표시 시스템
    - Resources 폴더에서 동적으로 모델과 텍스처 로드
    - ID 기반 의류 검색 및 변경 기능
+   - **Cloth_Texture.mat 통합 시스템**: 모든 메쉬에 공통 Material 적용 후 Base Map만 변경
 
 4. **WebGLCommunicator.cs** (`Assets/Scripts/WebGLCommunicator.cs`)
    - WebGL과 JavaScript 간의 통신 인터페이스
    - OutfitDataLoader와 통합된 초기화 시스템
    - 서버 URL 변경 및 재로드 기능
+
+5. **CameraController.cs** (`Assets/Scripts/CameraController.cs`)
+   - 의류 타입에 따른 자동 카메라 포지셔닝 시스템
+   - Top (상의): x0 y1.41 z1.22 위치로 카메라 이동
+   - Bottom (하의): x0 y0.89 z1.61 위치로 카메라 이동
+   - 부드러운 애니메이션 지원 및 즉시 이동 옵션
+
+6. **ClothRotator.cs** (`Assets/Scripts/ClothRotator.cs`)
+   - 의류 모델 전용 마우스 회전 컨트롤러
+   - 마우스 클릭 및 드래그로 의류 모델 회전
+   - Y축 회전 (좌우), X축 회전 (상하) 지원
+   - 회전 범위 제한, 관성 효과, UI 충돌 방지 기능
+   - ClothingModel과 자동 연동
+   - **WebGL 호환**: 메쉬에 미리 설정된 Collider 사용 권장
 
 ### 데이터 구조
 
@@ -56,6 +71,14 @@ WebClothingViewer는 Unity로 개발된 웹 기반 의류 3D 뷰어 애플리케
 3. 데이터 변환 및 캐싱
 4. 웹에 "unityReady" 신호 전송
 ```
+
+### Material 시스템
+
+**Cloth_Texture.mat 통합 시스템:**
+- 모든 의류 메쉬는 `Assets/Resources/Cloth_Texture.mat` Material을 공유
+- 의류 변경 시 Material 인스턴스 생성 없이 Base Map만 교체
+- URP 호환: `_BaseMap` 프로퍼티와 `mainTexture` 동시 설정
+- 메모리 효율성 향상 및 렌더링 최적화
 
 ### JSON 데이터 구조
 
@@ -102,10 +125,7 @@ Unity에서 File > Build Settings > WebGL 플랫폼 선택 후 빌드
 - `outfitsLoaded:{count}`: 옷 데이터 로드 완료 (개수 포함)
 - `clothingChanged:{outfitId}`: 의류 변경 완료
 - `textureLoaded:{outfitId}`: 텍스처 다운로드 및 적용 완료
-- `modelHidden/modelShown`: 모델 표시 상태 변경
 - `currentClothingInfo:{info}`: 현재 의류 정보
-- `cameraRotated:{x},{y}`: 카메라 회전 완료
-- `cameraZoomed:{distance}`: 카메라 줌 완료
 - `availableOutfits:{id|name|type,...}`: 사용 가능한 옷 목록
 - `outfitsReloading`: 서버에서 데이터 재로드 시작
 - `outfitsReloaded:{count}`: 서버에서 데이터 재로드 완료
@@ -113,12 +133,8 @@ Unity에서 File > Build Settings > WebGL 플랫폼 선택 후 빌드
 
 ### 웹에서 Unity로 호출 가능한 메서드
 - `ChangeClothingFromWeb(string outfitId)`: 의류 변경 (ID 기반)
-- `HideModelFromWeb()`: 모델 숨기기
-- `ShowModelFromWeb()`: 모델 표시
 - `GetCurrentClothingInfo()`: 현재 의류 정보 요청
 - `GetAvailableOutfits()`: 사용 가능한 옷 목록 요청
-- `RotateCamera(float x, float y)`: 카메라 회전
-- `ZoomCamera(float delta)`: 카메라 줌
 - `SetServerUrl(string url)`: 서버 URL 변경
 - `ReloadOutfitsFromServer()`: 서버에서 옷 데이터 재로드
 
@@ -128,6 +144,7 @@ Unity에서 File > Build Settings > WebGL 플랫폼 선택 후 빌드
 - 새로운 의류 추가 시 JSON 파일(`Assets/StreamingAssets/outfits.json`)만 수정
 - `modelPath` 필드는 제거됨: `topCategory` 또는 `bottomCategory` 값이 자동으로 모델 경로가 됨
 - Resources 폴더에 해당 카테고리 이름의 3D 모델 파일이 있어야 함 (예: Tshirt.prefab, Shorts.prefab)
+- **중요**: 모든 메쉬 프리팹에 Collider 컴포넌트를 미리 설정해야 함 (BoxCollider 권장)
 - 서버 연동 시 `OutfitDataLoader.useLocalFile = false` 설정
 - ID는 고유해야 하며 ScriptableObject.name으로 사용됨
 

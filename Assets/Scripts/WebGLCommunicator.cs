@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Runtime.InteropServices;
 
 public class WebGLCommunicator : MonoBehaviour
 {
@@ -9,15 +8,8 @@ public class WebGLCommunicator : MonoBehaviour
     [Header("옷 데이터 로더")]
     public OutfitDataLoader outfitDataLoader;
     
-    [Header("카메라 설정")]
-    public Camera mainCamera;
-    public Transform cameraTarget; // 카메라가 바라볼 타겟
     
     public static WebGLCommunicator Instance { get; private set; }
-    
-    // WebGL에서 JavaScript로 메시지 전송을 위한 외부 함수
-    [DllImport("__Internal")]
-    private static extern void SendMessageToWeb(string message);
     
     void Awake()
     {
@@ -34,8 +26,8 @@ public class WebGLCommunicator : MonoBehaviour
     
     void Start()
     {
-        // 카메라는 수동으로 조절하므로 자동 설정 비활성화
-        // SetupCamera();
+        // 웹에 Unity 준비 완료 신호 먼저 전송
+        SendToWeb("unityReady");
         
         // 옷 데이터 로드 시작
         StartCoroutine(InitializeOutfitData());
@@ -84,6 +76,24 @@ public class WebGLCommunicator : MonoBehaviour
     /// <summary>
     /// 웹에서 호출할 옷 변경 메서드 (JavaScript에서 직접 호출)
     /// </summary>
+    [ContextMenu("Test Change Tshirt")]
+    private void TestChangeTshirt() => ChangeClothingFromWeb("tshirt_001");
+    
+    [ContextMenu("Test Change Shirt")]  
+    private void TestChangeShirt() => ChangeClothingFromWeb("shirt_001");
+    
+    [ContextMenu("Test Change Pants")]
+    private void TestChangePants() => ChangeClothingFromWeb("pants_001");
+    
+    [ContextMenu("Test Change Shorts")]
+    private void TestChangeShorts() => ChangeClothingFromWeb("shorts_001");
+    
+    [ContextMenu("Test Get Current Info")]
+    private void TestGetCurrentInfo() => GetCurrentClothingInfo();
+    
+    [ContextMenu("Test Get Available Outfits")]
+    private void TestGetAvailableOutfits() => GetAvailableOutfits();
+    
     public void ChangeClothingFromWeb(string outfitId)
     {
         Debug.Log($"웹에서 옷 변경 요청 받음: {outfitId}");
@@ -126,29 +136,6 @@ public class WebGLCommunicator : MonoBehaviour
         }
     }
     
-    /// <summary>
-    /// 웹에서 호출할 모델 숨기기 메서드
-    /// </summary>
-    public void HideModelFromWeb()
-    {
-        if (clothingModel != null)
-        {
-            clothingModel.HideModel();
-            SendToWeb("modelHidden");
-        }
-    }
-    
-    /// <summary>
-    /// 웹에서 호출할 모델 보이기 메서드
-    /// </summary>
-    public void ShowModelFromWeb()
-    {
-        if (clothingModel != null)
-        {
-            clothingModel.ShowModel();
-            SendToWeb("modelShown");
-        }
-    }
     
     /// <summary>
     /// 웹에서 호출할 현재 옷 정보 요청 메서드
@@ -162,21 +149,6 @@ public class WebGLCommunicator : MonoBehaviour
         }
     }
     
-    /// <summary>
-    /// 카메라 설정
-    /// </summary>
-    private void SetupCamera()
-    {
-        if (mainCamera != null && cameraTarget != null)
-        {
-            // 카메라가 타겟을 바라보도록 설정
-            mainCamera.transform.LookAt(cameraTarget);
-            
-            // 적절한 거리로 카메라 위치 조정
-            Vector3 direction = (mainCamera.transform.position - cameraTarget.position).normalized;
-            mainCamera.transform.position = cameraTarget.position + direction * 3f;
-        }
-    }
     
     /// <summary>
     /// 웹으로 메시지 전송 (외부에서도 호출 가능)
@@ -186,7 +158,9 @@ public class WebGLCommunicator : MonoBehaviour
         #if UNITY_WEBGL && !UNITY_EDITOR
         try
         {
-            SendMessageToWeb(message);
+            // Unity 6의 WebGL에서 JavaScript 함수 호출
+            string jsCode = $"if(window.receiveUnityMessage) window.receiveUnityMessage('{message}');";
+            Application.ExternalEval(jsCode);
             Debug.Log($"웹으로 메시지 전송: {message}");
         }
         catch (System.Exception e)
@@ -198,39 +172,7 @@ public class WebGLCommunicator : MonoBehaviour
         #endif
     }
     
-    /// <summary>
-    /// 카메라 각도 조정 (웹에서 호출 가능)
-    /// </summary>
-    public void RotateCamera(float x, float y)
-    {
-        if (mainCamera != null && cameraTarget != null)
-        {
-            // 타겟 주변으로 카메라 회전
-            mainCamera.transform.RotateAround(cameraTarget.position, Vector3.up, x);
-            mainCamera.transform.RotateAround(cameraTarget.position, mainCamera.transform.right, y);
-            
-            SendToWeb($"cameraRotated:{x},{y}");
-        }
-    }
     
-    /// <summary>
-    /// 카메라 줌 조정 (웹에서 호출 가능)
-    /// </summary>
-    public void ZoomCamera(float delta)
-    {
-        if (mainCamera != null && cameraTarget != null)
-        {
-            Vector3 direction = (mainCamera.transform.position - cameraTarget.position).normalized;
-            float newDistance = Vector3.Distance(mainCamera.transform.position, cameraTarget.position) - delta;
-            
-            // 줌 범위 제한
-            newDistance = Mathf.Clamp(newDistance, 1f, 10f);
-            
-            mainCamera.transform.position = cameraTarget.position + direction * newDistance;
-            
-            SendToWeb($"cameraZoomed:{newDistance}");
-        }
-    }
     
     /// <summary>
     /// 웹에서 사용 가능한 옷 목록 요청 (JavaScript에서 호출 가능)
