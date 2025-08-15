@@ -511,7 +511,7 @@ MonoBehaviour:
   enableRotation: 1
   rotationSpeed: 50
   autoAddCollider: 1
-  clothMaterial: {fileID: 0}
+  clothMaterial: {fileID: 2100000, guid: a7ebe660e2c94a44db26b9758353c4f0, type: 2}
 --- !u!4 &916567940
 Transform:
   m_ObjectHideFlags: 0
@@ -699,7 +699,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   jsonFileName: outfits.json
-  useLocalFile: 1
+  useLocalFile: 0
   serverUrl: 
 --- !u!114 &1739912891
 MonoBehaviour:
