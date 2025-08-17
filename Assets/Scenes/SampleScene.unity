@@ -698,9 +698,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 100d10f2ad5ca98458c5ef0f7931801d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  jsonFileName: outfits.json
+  jsonFileName: 
   useLocalFile: 0
-  serverUrl: 
+  serverUrl: http://15.165.129.131:3000/api/cloth/outfits
 --- !u!114 &1739912891
 MonoBehaviour:
   m_ObjectHideFlags: 0
