@@ -367,6 +367,17 @@ public class ClothingModel : MonoBehaviour
         
         using (UnityEngine.Networking.UnityWebRequest request = UnityEngine.Networking.UnityWebRequestTexture.GetTexture(url))
         {
+            // OutfitDataLoader에서 토큰 가져와서 헤더에 추가
+            if (OutfitDataLoader.Instance != null)
+            {
+                string token = OutfitDataLoader.Instance.GetCurrentToken();
+                if (!string.IsNullOrEmpty(token))
+                {
+                    request.SetRequestHeader("Authorization", "Bearer " + token);
+                    Debug.Log("텍스처 요청에 Authorization 헤더 추가됨");
+                }
+            }
+            
             yield return request.SendWebRequest();
             
             if (request.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
