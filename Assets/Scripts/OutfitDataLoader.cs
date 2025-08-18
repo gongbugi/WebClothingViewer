@@ -26,8 +26,8 @@ public class OutfitDataLoader : MonoBehaviour
 {
     [Header("설정")]
     public string jsonFileName = "outfits.json";
-    public bool useLocalFile = true; // 로컬 파일 사용 여부
-    public string serverUrl = "https://yourserver.com/api/outfits"; // 서버 URL (나중에 사용)
+    public bool useLocalFile = false; // 서버에서 데이터 가져오기
+    public string serverUrl = "http://localhost:3000/api/outfits"; // 서버 URL
 
     public static OutfitDataLoader Instance { get; private set; }
     
